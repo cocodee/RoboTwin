@@ -52,6 +52,7 @@ try:
             with open(self.yml_path, "r") as f:
                 yml_data = yaml.safe_load(f)
             self.frame_bias = yml_data["planner"]["frame_bias"]
+            self.skip_warmup = yml_data["planner"].get("skip_warmup", False)
 
             # motion generation
             if True:
@@ -76,19 +77,23 @@ try:
                 world_config,
                 interpolation_dt=1 / 250,
                 num_trajopt_seeds=1,
+                use_cuda_graph=not self.skip_warmup,
             )
 
             self.motion_gen = MotionGen(motion_gen_config)
-            self.motion_gen.warmup()
+            if not self.skip_warmup:
+                self.motion_gen.warmup()
             motion_gen_config = MotionGenConfig.load_from_robot_config(
                 self.yml_path,
                 world_config,
                 interpolation_dt=1 / 250,
                 num_trajopt_seeds=1,
                 num_graph_seeds=1,
+                use_cuda_graph=not self.skip_warmup,
             )
             self.motion_gen_batch = MotionGen(motion_gen_config)
-            self.motion_gen_batch.warmup(batch=CONFIGS.ROTATE_NUM)
+            if not self.skip_warmup:
+                self.motion_gen_batch.warmup(batch=CONFIGS.ROTATE_NUM)
 
         def plan_path(
             self,
@@ -123,14 +128,33 @@ try:
                 target_pose_p = T_new[:3, 3]
                 target_pose_q = t3d.quaternions.mat2quat(T_new[:3, :3])
 
-            goal_pose_of_ee = CuroboPose.from_list(list(target_pose_p) + list(target_pose_q))
             joint_indices = [self.all_joints.index(name) for name in self.active_joints_name if name in self.all_joints]
             joint_angles = [curr_joint_pos[index] for index in joint_indices]
             joint_angles = [round(angle, 5) for angle in joint_angles]  # avoid the precision problem
-            start_joint_states = JointState.from_position(
-                torch.tensor(joint_angles).cuda().reshape(1, -1),
-                joint_names=self.active_joints_name,
-            )
+            try:
+                start_joint_states = JointState.from_position(
+                    torch.tensor(joint_angles).cuda().reshape(1, -1),
+                    joint_names=self.active_joints_name,
+                )
+                current_state = self.motion_gen.kinematics.get_state(start_joint_states.position)
+                current_position = current_state.ee_position[0].detach().cpu().numpy()
+                current_quaternion = current_state.ee_quaternion[0].detach().cpu().numpy()
+                target_quaternion = np.asarray(target_pose_q, dtype=float)
+                target_quaternion /= np.linalg.norm(target_quaternion)
+                quat_dot = abs(float(np.dot(current_quaternion, target_quaternion)))
+                is_noop = (
+                    np.linalg.norm(current_position - target_pose_p) < 1e-4
+                    and 1.0 - min(1.0, quat_dot) < 1e-6
+                )
+                if is_noop:
+                    return {
+                        "status": "Success",
+                        "position": np.asarray([[joint_angles]], dtype=np.float32),
+                        "velocity": np.zeros((1, 1, len(joint_angles)), dtype=np.float32),
+                    }
+                goal_pose_of_ee = CuroboPose.from_list(list(target_pose_p) + list(target_pose_q))
+            except RuntimeError as e:
+                return {"status": "Fail", "error": str(e)}
             # plan
             plan_config = MotionGenPlanConfig(max_attempts=10)
             if constraint_pose is not None:
@@ -140,7 +164,10 @@ try:
                 )
                 plan_config.pose_cost_metric = pose_cost_metric
 
-            result = self.motion_gen.plan_single(start_joint_states, goal_pose_of_ee, plan_config)
+            try:
+                result = self.motion_gen.plan_single(start_joint_states, goal_pose_of_ee, plan_config)
+            except RuntimeError as e:
+                return {"status": "Fail", "error": str(e)}
 
             # output
             res_result = dict()
