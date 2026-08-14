@@ -1021,6 +1021,7 @@ class Base_Task(gym.Env):
                 continue
             if now_pose is None or len(traj_lst["position"][i]) < now_step:
                 now_pose = target_lst[i]
+                now_step = len(traj_lst["position"][i])
         return now_pose
 
     # test grasp pose of all contact points
@@ -1200,6 +1201,9 @@ class Base_Task(gym.Env):
             target_dis=grasp_dis,
             contact_point_id=contact_point_id,
         )
+        if pre_grasp_pose is None or grasp_pose is None:
+            self.plan_success = False
+            raise RuntimeError(f"No feasible grasp pose for {actor.get_name()} with {arm_tag} arm.")
         if pre_grasp_pose == grasp_pose:
             return arm_tag, [
                 Action(arm_tag, "move", target_pose=pre_grasp_pose),

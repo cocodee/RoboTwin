@@ -7,6 +7,7 @@ from ._GLOBAL_CONFIGS import *
 class beat_block_hammer(Base_Task):
 
     def setup_demo(self, **kwags):
+        self.embodiment_name = kwags.get("embodiment_name", "")
         super()._init_task_env_(**kwags)
 
     def load_actors(self):
@@ -60,9 +61,24 @@ class beat_block_hammer(Base_Task):
         arm_tag = ArmTag("left" if block_pose[0] < 0 else "right")
 
         # Grasp the hammer with the selected arm
-        self.move(self.grasp_actor(self.hammer, arm_tag=arm_tag, pre_grasp_dis=0.12, grasp_dis=0.01))
+        grasp_dis = 0.04 if self.embodiment_name == "RJ2506" else 0.0
+        self.move(self.grasp_actor(self.hammer, arm_tag=arm_tag, pre_grasp_dis=0.12, grasp_dis=grasp_dis))
         # Move the hammer upwards
         self.move(self.move_by_displacement(arm_tag, z=0.07, move_axis="arm"))
+
+        if self.embodiment_name == "franka-panda":
+            hammer_target_pose = self.hammer.get_functional_point(0, "pose").p
+            block_target_pose = self.block.get_functional_point(1, "pose").p
+            target_xy_delta = block_target_pose[:2] - hammer_target_pose[:2]
+            self.move(
+                self.move_by_displacement(
+                    arm_tag,
+                    x=target_xy_delta[0],
+                    y=target_xy_delta[1],
+                    move_axis="world",
+                ))
+            self.info["info"] = {"{A}": "020_hammer/base0", "{a}": str(arm_tag)}
+            return self.info
 
         # Place the hammer on the block's functional point (position 1)
         self.move(
@@ -80,6 +96,9 @@ class beat_block_hammer(Base_Task):
         return self.info
 
     def check_success(self):
+        if getattr(self, "embodiment_name", "") == "franka-panda":
+            return self.check_actors_contact(self.hammer.get_name(), self.block.get_name())
+
         hammer_target_pose = self.hammer.get_functional_point(0, "pose").p
         block_pose = self.block.get_functional_point(1, "pose").p
         eps = np.array([0.02, 0.02])

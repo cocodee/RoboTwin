@@ -53,6 +53,9 @@ try:
                 yml_data = yaml.safe_load(f)
             self.frame_bias = yml_data["planner"]["frame_bias"]
             self.skip_warmup = yml_data["planner"].get("skip_warmup", False)
+            self.graph_only = yml_data["planner"].get("graph_only", False)
+            self.max_attempts = yml_data["planner"].get("max_attempts", 10)
+            self.timeout = yml_data["planner"].get("timeout", 10.0)
 
             # motion generation
             if True:
@@ -156,7 +159,15 @@ try:
             except RuntimeError as e:
                 return {"status": "Fail", "error": str(e)}
             # plan
-            plan_config = MotionGenPlanConfig(max_attempts=10)
+            if self.graph_only:
+                plan_config = MotionGenPlanConfig(
+                    enable_graph=True,
+                    enable_opt=False,
+                    max_attempts=self.max_attempts,
+                    timeout=self.timeout,
+                )
+            else:
+                plan_config = MotionGenPlanConfig(max_attempts=self.max_attempts, timeout=self.timeout)
             if constraint_pose is not None:
                 pose_cost_metric = PoseCostMetric(
                     hold_partial_pose=True,
@@ -244,7 +255,15 @@ try:
             joint_angles_cuda = torch.cat([joint_angles_cuda] * num_poses, dim=0)
             start_joint_states = JointState.from_position(joint_angles_cuda, joint_names=self.active_joints_name)
             # plan
-            plan_config = MotionGenPlanConfig(max_attempts=10)
+            if self.graph_only:
+                plan_config = MotionGenPlanConfig(
+                    enable_graph=True,
+                    enable_opt=False,
+                    max_attempts=self.max_attempts,
+                    timeout=self.timeout,
+                )
+            else:
+                plan_config = MotionGenPlanConfig(max_attempts=self.max_attempts, timeout=self.timeout)
             if constraint_pose is not None:
                 pose_cost_metric = PoseCostMetric(
                     hold_partial_pose=True,
@@ -255,7 +274,10 @@ try:
             try:
                 result = self.motion_gen_batch.plan_batch(start_joint_states, goal_pose_of_ee, plan_config)
             except Exception as e:
-                return {"status": ["Failure" for i in range(10)]}
+                return {
+                    "status": np.array(["Failure" for i in range(num_poses)], dtype=object),
+                    "error": str(e),
+                }
 
             # output
             res_result = dict()

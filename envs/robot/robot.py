@@ -55,12 +55,21 @@ class Robot:
         self.left_gripper_scale = left_embodiment_args["gripper_scale"]
         self.left_homestate = left_embodiment_args.get("homestate", [[0] * len(self.left_arm_joints_name)])[0]
         self.left_fix_gripper_name = left_embodiment_args.get("fix_gripper_name", [])
+
         def get_arm_matrix(config, key, arm_index):
             matrix = np.array(config.get(key, [[1, 0, 0], [0, 1, 0], [0, 0, 1]]), dtype=float)
             if matrix.shape == (2, 3, 3):
                 return matrix[arm_index]
             return matrix
 
+        def get_arm_vector(config, key, arm_index):
+            vector = np.array(config.get(key, [0.0, 0.0, 0.0]), dtype=float)
+            if vector.shape == (2, 3):
+                return vector[arm_index]
+            return vector
+
+        self.left_gripper_center_offset = get_arm_vector(left_embodiment_args, "gripper_center_offset", 0)
+        self.left_gripper_endlink_offset = get_arm_vector(left_embodiment_args, "gripper_endlink_offset", 0)
         self.left_delta_matrix = get_arm_matrix(left_embodiment_args, "delta_matrix", 0)
         self.left_inv_delta_matrix = np.linalg.inv(self.left_delta_matrix)
         self.left_global_trans_matrix = get_arm_matrix(left_embodiment_args, "global_trans_matrix", 0)
@@ -87,6 +96,8 @@ class Robot:
         self.right_gripper_scale = right_embodiment_args["gripper_scale"]
         self.right_homestate = right_embodiment_args.get("homestate", [[1] * len(self.right_arm_joints_name)])[1]
         self.right_fix_gripper_name = right_embodiment_args.get("fix_gripper_name", [])
+        self.right_gripper_center_offset = get_arm_vector(right_embodiment_args, "gripper_center_offset", 1)
+        self.right_gripper_endlink_offset = get_arm_vector(right_embodiment_args, "gripper_endlink_offset", 1)
         self.right_delta_matrix = get_arm_matrix(right_embodiment_args, "delta_matrix", 1)
         self.right_inv_delta_matrix = np.linalg.inv(self.right_delta_matrix)
         self.right_global_trans_matrix = get_arm_matrix(right_embodiment_args, "global_trans_matrix", 1)
@@ -333,12 +344,19 @@ class Robot:
 
     def _trans_from_gripper_to_endlink(self, target_pose, arm_tag=None):
         gripper_bias = (self.left_gripper_bias if arm_tag == "left" else self.right_gripper_bias)
+        gripper_center_offset = (
+            self.left_gripper_center_offset if arm_tag == "left" else self.right_gripper_center_offset
+        )
+        gripper_endlink_offset = (
+            self.left_gripper_endlink_offset if arm_tag == "left" else self.right_gripper_endlink_offset
+        )
         inv_delta_matrix = (self.left_inv_delta_matrix if arm_tag == "left" else self.right_inv_delta_matrix)
         target_pose_arr = np.array(target_pose)
         gripper_pose_pos, gripper_pose_quat = deepcopy(target_pose_arr[0:3]), deepcopy(target_pose_arr[-4:])
         gripper_pose_mat = t3d.quaternions.quat2mat(gripper_pose_quat)
-        gripper_pose_pos += gripper_pose_mat @ np.array([0.12 - gripper_bias, 0, 0]).T
+        gripper_pose_pos += gripper_pose_mat @ (np.array([0.12 - gripper_bias, 0, 0]) + gripper_center_offset).T
         gripper_pose_mat = gripper_pose_mat @ inv_delta_matrix
+        gripper_pose_pos += gripper_pose_mat @ gripper_endlink_offset.T
         gripper_pose_quat = t3d.quaternions.mat2quat(gripper_pose_mat)
         return sapien.Pose(gripper_pose_pos, gripper_pose_quat)
 
@@ -594,6 +612,12 @@ class Robot:
             print("No arm tag")
             return
         gripper_bias = (self.left_gripper_bias if arm_tag == "left" else self.right_gripper_bias)
+        gripper_center_offset = (
+            self.left_gripper_center_offset if arm_tag == "left" else self.right_gripper_center_offset
+        )
+        gripper_endlink_offset = (
+            self.left_gripper_endlink_offset if arm_tag == "left" else self.right_gripper_endlink_offset
+        )
         global_trans_matrix = (self.left_global_trans_matrix if arm_tag == "left" else self.right_global_trans_matrix)
         delta_matrix = (self.left_delta_matrix if arm_tag == "left" else self.right_delta_matrix)
         ee_pose = (
@@ -606,7 +630,13 @@ class Robot:
         dis = gripper_bias
         if is_endpose == False:
             dis -= 0.12
-        endpose_arr[:3, 3] = ee_pose.p + endpose_arr[:3, :3] @ np.array([dis, 0, 0]).T
+            offset = np.array([dis, 0, 0]) - gripper_center_offset
+            endpose_arr[:3, 3] = ee_pose.p + endpose_arr[:3, :3] @ offset.T - t3d.quaternions.quat2mat(
+                ee_pose.q
+            ) @ gripper_endlink_offset.T
+        else:
+            offset = np.array([dis, 0, 0])
+            endpose_arr[:3, 3] = ee_pose.p + endpose_arr[:3, :3] @ offset.T
         res = (endpose_arr[:3, 3].tolist() + t3d.quaternions.mat2quat(endpose_arr[:3, :3]).tolist())
         return res
 
