@@ -14,7 +14,6 @@ from curobo.util_file import load_yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 EMBODIMENT = ROOT / "assets" / "embodiments" / "RJ2506"
-URDF = EMBODIMENT / "urdf" / "relpath_RJ2506_fixed.urdf"
 CONFIG = EMBODIMENT / "config.yml"
 POSITION_TOLERANCE_M = 5e-3
 ROTATION_TOLERANCE_DEG = 3.0
@@ -30,14 +29,14 @@ def quat_angle_deg(a, b):
     return math.degrees(2.0 * math.acos(dot))
 
 
-def make_scene_robot():
+def make_scene_robot(urdf):
     engine = sapien.Engine()
     renderer = sapien.SapienRenderer()
     engine.set_renderer(renderer)
     scene = engine.create_scene()
     loader = scene.create_urdf_loader()
     loader.fix_root_link = True
-    robot = loader.load(str(URDF))
+    robot = loader.load(str(urdf))
     return scene, robot
 
 
@@ -51,7 +50,7 @@ def main():
     with open(CONFIG, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    scene, sapien_robot = make_scene_robot()
+    scene, sapien_robot = make_scene_robot(EMBODIMENT / config["urdf_path"])
     active_names = [joint.get_name() for joint in sapien_robot.get_active_joints()]
 
     samples = [

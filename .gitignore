@@ -8,7 +8,9 @@ envs/curobo
 *.zip
 viewer_show.*
 eval_video/
-task_config/
+task_config/*
+!task_config/demo_rj2506.yml
+!task_config/_embodiment_config.yml
 **/.DS_Store
 
 # eval result
@@ -30,3 +32,19 @@ envs/curobo/*
 /*.txt
 
 diagnostics/
+
+# Small RJ2506 configuration and derived collision assets; original meshes stay external.
+!assets/embodiments/
+assets/embodiments/*
+!assets/embodiments/RJ2506/
+assets/embodiments/RJ2506/*
+!assets/embodiments/RJ2506/config.yml
+!assets/embodiments/RJ2506/collision.yml
+!assets/embodiments/RJ2506/curobo_left_tmp.yml
+!assets/embodiments/RJ2506/curobo_right_tmp.yml
+!assets/embodiments/RJ2506/urdf/
+assets/embodiments/RJ2506/urdf/*
+!assets/embodiments/RJ2506/urdf/relpath_RJ2506_compact.urdf
+!assets/embodiments/RJ2506/meshes/
+assets/embodiments/RJ2506/meshes/*
+!assets/embodiments/RJ2506/meshes/convex_compact/

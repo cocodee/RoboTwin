@@ -136,6 +136,15 @@ class Robot:
         self.left_entity.set_root_pose(self.left_entity_origion_pose)
         self.right_entity.set_root_pose(self.right_entity_origion_pose)
 
+        # Small grippers need a contact margin smaller than their finger gap.
+        for entity, config in ((self.left_entity, left_embodiment_args),
+                               (self.right_entity, right_embodiment_args)):
+            contact_offset = config.get("collision_contact_offset")
+            if contact_offset is not None:
+                for link in entity.get_links():
+                    for shape in link.get_collision_shapes():
+                        shape.set_contact_offset(contact_offset)
+
     def reset(self, scene, need_topp=False, **kwargs):
         self._init_robot_(scene, need_topp, **kwargs)
 

@@ -75,6 +75,18 @@ try:
                         },
                     }
                 }
+            # Optional world-frame tabletop for embodiments with a different base
+            # placement. Transform the complete pose, including its orientation.
+            table = yml_data["planner"].get("table")
+            if table is not None:
+                position, quaternion = self._trans_from_world_to_base(
+                    np.r_[self.robot_origion_pose.p, self.robot_origion_pose.q],
+                    np.asarray(table["pose"], dtype=float),
+                )
+                world_config = {"cuboid": {"table": {
+                    "dims": table["dims"],
+                    "pose": list(position) + list(quaternion),
+                }}}
             motion_gen_config = MotionGenConfig.load_from_robot_config(
                 self.yml_path,
                 world_config,
@@ -184,6 +196,7 @@ try:
             res_result = dict()
             if result.success.item() == False:
                 res_result["status"] = "Fail"
+                res_result["error"] = str(result.status)
                 return res_result
             else:
                 res_result["status"] = "Success"

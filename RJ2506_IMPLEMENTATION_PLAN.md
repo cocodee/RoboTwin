@@ -1,5 +1,73 @@
 # RJ2506 Integration Plan
 
+## 2026-10-23: `beat_block_hammer` succeeds with RJ2506
+
+The current implementation passes the original hammer-head XY alignment and
+hammer/block contact criteria. It also checks that the hammer is physically
+lifted by at least 5 cm before striking. The older blocker reports below are
+historical investigation notes.
+
+Fixes:
+
+- Preserve the finger slots with 16 convex collision parts per finger. A single
+  convex hull incorrectly narrowed the approximately 34 mm slot to 23 mm at the
+  grasp depth. The derived URDF changes only finger collision geometry.
+- Use 1 mm contact margins on the robot and hammer, and calibrate RJ2506 arm
+  drives to stiffness 10000 / damping 1000.
+- Place the base at world Y = -0.55 m (10 cm closer to the existing table).
+  Table height, object dimensions/mass, joint limits, and success criteria remain
+  unchanged.
+- Solve the final grasp first, retreat 7 cm with continuous IK on the same branch,
+  then graph-plan to that pre-grasp joint state. Check every Cartesian sample for
+  joint limits and CuRobo table/self collisions. Align the held hammer head and
+  strike vertically while preserving its orientation.
+- Record all five arm trajectories in the existing collection format and replay
+  them without replanning. The smoke config saves every five simulation steps.
+- Specify the actual tabletop in world coordinates in RJ2506's CuRobo templates;
+  transform its complete pose into the robot frame instead of using the old
+  hard-coded, mirrored table position.
+
+Validation environment: `myrobotwin`, NVIDIA H100; `TORCH_CUDA_ARCH_LIST=9.0`.
+Seed 0 (right arm) and seed 1 (left arm) pass both planning and trajectory replay,
+with measured lifts of approximately 7.6 cm. EE frame alignment passes with
+maximum position error approximately 1 micrometer and rotation error 0.000031 deg.
+
+Standard collection also completed: seed 0 succeeded on the first attempt
+(0 failures / 1 try). The saved replay measured a 0.076625 m hammer lift.
+Validated outputs under `data/beat_block_hammer/demo_rj2506/`:
+
+- `data/episode0.hdf5`: 63,634,944 bytes; all camera, joint-action, and end-pose
+  streams contain 1612 frames, with finite numeric values.
+- `video/episode0.mp4`: 1612 frames, H.264, 320 x 240, 30 FPS, 53.734 seconds.
+- `instructions/episode0.json`, `scene_info.json`, `seed.txt`, and
+  `_traj_data/episode0.pkl` are present.
+
+Local evidence is saved in `diagnostics/rj2506_collect_success.log`,
+`diagnostics/rj2506_artifact_validation.json`, and the two
+`diagnostics/rj2506_seed{0,1}_replay.log` files. These generated files are ignored.
+
+Reproduce from the repository root:
+
+```bash
+conda activate myrobotwin
+python script/update_embodiment_config_path.py
+python script/test_render.py
+TORCH_CUDA_ARCH_LIST=9.0 python script/test_rj2506_beat_block_hammer.py --seeds 0 1 --replay
+TORCH_CUDA_ARCH_LIST=9.0 bash collect_data.sh beat_block_hammer demo_rj2506 1
+```
+
+GPU `1` was used for collection; change the final argument for another GPU.
+The original RJ2506 visual meshes and benchmark object assets must already be
+installed. Generated absolute-path CuRobo configs, collected data, videos, and
+diagnostic files stay ignored. The small portable configs, derived collision
+meshes, and derived URDF are versioned so this repair is not lost to `.gitignore`.
+
+Optional collision regeneration (not required for normal runs): install
+`coacd==1.0.14` in `myrobotwin` with `pip install --no-deps coacd==1.0.14`, then
+run `OMP_NUM_THREADS=4 python script/prepare_rj2506_collision.py`. This also needs
+the original `urdf/relpath_RJ2506_fixed.urdf`. Normal runs use the included
+`relpath_RJ2506_compact.urdf` and require no CoACD installation.
+
 ## Summary
 
 Add the RJ2506 dual-arm robot as a RoboTwin embodiment. Copy assets from `/home/kdi/workspace/supre_robot_assets/assets/robots/RJ2506/` into `assets/embodiments/RJ2506/`, configure RoboTwin and CuRobo files, and validate in the `myrobotwin` conda Python environment.

@@ -1,0 +1,46 @@
+collision_spheres:
+  base_link:
+    - center: [0.0, 0.0, 0.15]
+      radius: 0.12
+  body_link1:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.08
+  body_link2:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.08
+  left_arm_link0:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  left_arm_link1:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  left_arm_link2:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  left_arm_link3:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  left_arm_link4:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  left_hand_base:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  right_arm_link0:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  right_arm_link1:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  right_arm_link2:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  right_arm_link3:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  right_arm_link4:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04
+  right_hand_base:
+    - center: [0.0, 0.0, 0.0]
+      radius: 0.04

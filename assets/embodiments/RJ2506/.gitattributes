@@ -1,0 +1,6 @@
+# Store these small robot configuration files directly in Git.
+collision.yml -filter -diff -merge text
+config.yml -filter -diff -merge text
+curobo_left_tmp.yml -filter -diff -merge text
+curobo_right_tmp.yml -filter -diff -merge text
+urdf/relpath_RJ2506_compact.urdf -filter -diff -merge text

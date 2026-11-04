@@ -1,0 +1,46 @@
+urdf_path: "urdf/relpath_RJ2506_compact.urdf"
+joint_stiffness: 10000
+joint_damping: 1000
+gripper_stiffness: 1000
+gripper_damping: 200
+move_group: ["left_hand_tcp", "right_hand_tcp"]
+ee_joints: ["left_hand_tcp_joint", "right_hand_tcp_joint"]
+arm_joints_name:
+  - ["left_arm_joint0", "left_arm_joint1", "left_arm_joint2", "left_arm_joint3", "left_arm_joint4", "left_arm_joint5"]
+  - ["right_arm_joint0", "right_arm_joint1", "right_arm_joint2", "right_arm_joint3", "right_arm_joint4", "right_arm_joint5"]
+gripper_name:
+  - base: "left_hand_finger1_joint"
+    mimic: [["left_hand_finger2_joint", 1.0, 0.0]]
+  - base: "right_hand_finger1_joint"
+    mimic: [["right_hand_finger2_joint", 1.0, 0.0]]
+gripper_bias: 0.0
+gripper_scale: [0.025, 0.0]
+homestate:
+  - [0.0, 1.0, 0.0, 0.8, 0.0, 0.0]
+  - [0.0, 1.0, 0.0, 0.8, 0.0, 0.0]
+delta_matrix:
+  - - [0.21356138, 0.0, -0.97692967]
+    - [0.0, 1.0, 0.0]
+    - [0.97692967, 0.0, 0.21356138]
+  - - [0.21356146, 0.0, -0.97692960]
+    - [-0.97692960, 0.0, -0.21356146]
+    - [0.0, 1.0, 0.0]
+global_trans_matrix:
+  - [1, 0, 0]
+  - [0, 1, 0]
+  - [0, 0, 1]
+robot_pose:
+  - [0.0, -0.55, 0.0, 0.70710678, 0.0, 0.0, 0.70710678]
+  - [0.0, -0.55, 0.0, 0.70710678, 0.0, 0.0, 0.70710678]
+planner: "curobo"
+dual_arm: true
+rotate_lim: [0.0, 1.0]
+grasp_perfect_direction: ["front_right", "front_left"]
+static_camera_list:
+  - name: "head_camera"
+    position: [0.0, 0.8, 1.2]
+    forward: [0.0, -1.0, -0.35]
+    left: [1.0, 0.0, 0.0]
+
+# Millimeter-scale contact margins preserve clearance inside the finger slot.
+collision_contact_offset: 0.001

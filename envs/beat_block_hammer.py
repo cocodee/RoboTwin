@@ -45,6 +45,11 @@ class beat_block_hammer(Base_Task):
             is_static=True,
         )
         self.hammer.set_mass(0.001)
+        if self.embodiment_name == "RJ2506":
+            for component in self.hammer.actor.get_components():
+                if isinstance(component, sapien.physx.PhysxRigidDynamicComponent):
+                    for shape in component.get_collision_shapes():
+                        shape.set_contact_offset(0.001)
 
         self.add_prohibit_area(self.hammer, padding=0.10)
         self.prohibited_area.append([
@@ -60,9 +65,15 @@ class beat_block_hammer(Base_Task):
         # Determine which arm to use based on block position (left if block is on left side, else right)
         arm_tag = ArmTag("left" if block_pose[0] < 0 else "right")
 
+        if self.embodiment_name == "RJ2506":
+            from .robot.hammer_controller import HammerController
+
+            HammerController(self, arm_tag).run()
+            self.info["info"] = {"{A}": "020_hammer/base0", "{a}": str(arm_tag)}
+            return self.info
+
         # Grasp the hammer with the selected arm
-        grasp_dis = 0.04 if self.embodiment_name == "RJ2506" else 0.0
-        self.move(self.grasp_actor(self.hammer, arm_tag=arm_tag, pre_grasp_dis=0.12, grasp_dis=grasp_dis))
+        self.move(self.grasp_actor(self.hammer, arm_tag=arm_tag, pre_grasp_dis=0.12, grasp_dis=0.0))
         # Move the hammer upwards
         self.move(self.move_by_displacement(arm_tag, z=0.07, move_axis="arm"))
 
