@@ -151,3 +151,18 @@ public-calibration FK/IK checks, original task outcomes, and package-content plu
 fresh-wheel offline CLI checks. No HDF5 collection, standard benchmark replay or
 cross-seed success rate is claimed. This first task is complete at seed 0;
 review these lessons before selecting the next single task.
+
+## Model-free scripted alternative (2026-11-06)
+
+The RJ2506 play_once entry now also has a native BellController, analogous to
+the hammer expert. This is a separate scripted-expert implementation using
+current simulator actor geometry; it does not invoke the agent or a model. The
+historical Qwen result above predates this play_once addition. Its RGB worker
+never calls play_once, and the original check_success predicate is unchanged.
+
+See SCRIPTED_CLICK_BELL.md for collection and test commands. Left seed 0 and
+right seed 1 have passed press/withdrawal and recorded-path replay. The right
+rest initially catches its wrist camera against the table edge; turn the wrist
+away before raising, then use the right-specific hand tilt and higher arc.
+A CuRobo pass alone did not detect that attached-camera obstruction. Actual
+measured motion and original task outcomes remain essential.

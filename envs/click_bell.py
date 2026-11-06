@@ -8,6 +8,7 @@ import math
 class click_bell(Base_Task):
 
     def setup_demo(self, **kwags):
+        self.embodiment_name = kwags.get("embodiment_name", "")
         super()._init_task_env_(**kwags)
 
     def load_actors(self):
@@ -40,6 +41,13 @@ class click_bell(Base_Task):
         # Choose the arm to use: right arm if the bell is on the right side (positive x), left otherwise
         arm_tag = ArmTag("right" if self.bell.get_pose().p[0] > 0 else "left")
     
+        if self.embodiment_name == "RJ2506":
+            from .robot.bell_controller import BellController
+
+            BellController(self, arm_tag).run()
+            self.info["info"] = {"{A}": f"050_bell/base{self.bell_id}", "{a}": str(arm_tag)}
+            return self.info
+
         # Move the gripper above the top center of the bell and close the gripper to simulate a click
         # Note: grasp_actor here is not used to grasp the bell, but to simulate a touch/click action
         # You must use the same pre_grasp_dis and grasp_dis values as in the click_bell task
